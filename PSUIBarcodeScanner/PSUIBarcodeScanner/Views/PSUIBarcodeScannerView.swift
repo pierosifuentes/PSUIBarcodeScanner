@@ -13,100 +13,107 @@ open class PSUIBarcodeScannerView: UIView {
     
     private var session: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
-    private var lastResult: PSUIScannerResult?
+    private var lastResult: PSUIScannerResponse?
     private var highlightView: UIView = UIView()
-    public var isOneTimeSearch: Bool = true
+    private var currentCamera: PSUIScannerCamera?
+    public var isOneTimeSearch: Bool = false
     public var canRescanSameBarcode: Bool = true
-    public var scanOnLaunch: Bool = true
+    public var shouldScanOnLaunch: Bool = true
     public var shouldIgnoreResults: Bool = false
-    public var scanningTimeInterval: TimeInterval = 5
-    public var onScanSuccess: ((PSUIScannerResult) -> Void)?
-    public var onScanFailure: ((String) -> Void)?
+    public var onScanSuccess: ((PSUIScannerResponse) -> Void)?
+    public var onScanFailure: ((PSUIScannerError) -> Void)?
+    public var allowedMetadata: [AVMetadataObject.ObjectType]?
+    public var logger: PSUIScannerLogger = PSUIScannerLogger()
+    public var highlightColor: UIColor = UIColor.green
+    public var highlightErrorColor: UIColor = UIColor.red
+    public var highlightSameBarcodeColor: UIColor = UIColor.yellow
     
     // MARK: - IBOutlets
     
     override open func awakeFromNib() {
         super.awakeFromNib()
-        self.setupUI()
-        if self.scanOnLaunch {
-            self.startCapturing(on: self)
+        setupUI()
+        if shouldScanOnLaunch {
+            startCapturing()
         }
     }
     
     override public init(frame: CGRect) {
         super.init(frame: frame)
-        self.setupUI()
+        setupUI()
+        if shouldScanOnLaunch {
+            startCapturing()
+        }
+
     }
     
     required public init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
-        self.setupUI()
+        setupUI()
+        if shouldScanOnLaunch {
+            startCapturing()
+        }
     }
     
     private func setupUI() {
-        self.isUserInteractionEnabled = false
-        self.backgroundColor = .black
-        self.highlightView.autoresizingMask = UIView.AutoresizingMask(rawValue: UIView.AutoresizingMask.flexibleTopMargin.rawValue | UIView.AutoresizingMask.flexibleBottomMargin.rawValue | UIView.AutoresizingMask.flexibleLeftMargin.rawValue | UIView.AutoresizingMask.flexibleRightMargin.rawValue)
-        self.highlightView.layer.borderColor = UIColor.green.cgColor
-        self.highlightView.layer.borderWidth = 3
-        self.addSubview(self.highlightView)
+        isUserInteractionEnabled = false
+        clipsToBounds = true
+        backgroundColor = .black
+        highlightView.autoresizingMask = UIView.AutoresizingMask(rawValue: UIView.AutoresizingMask.flexibleTopMargin.rawValue | UIView.AutoresizingMask.flexibleBottomMargin.rawValue | UIView.AutoresizingMask.flexibleLeftMargin.rawValue | UIView.AutoresizingMask.flexibleRightMargin.rawValue)
+        highlightView.layer.borderColor = highlightColor.cgColor
+        highlightView.layer.borderWidth = 3
 
     }
     
-    private func startCapturing(on view: UIView?, inputCamera: PSUIScannerCamera = .rear) {
+    public func startCapturing(inputCamera: PSUIScannerCamera = .rear) {
         #if !targetEnvironment(simulator)
         guard let _ = UIApplication.camaraUsage else {
-            //TODO: LOG MANAGER
-            print("\nCamara usage was not setup on plist")
+            logger.e("Camara usage was not setup on plist")
             return
         }
         AVCaptureDevice.authorizeVideo { (authStatus) in
             switch authStatus {
-            case .justAuthorized, .alreadyAuthorized:
-                let session = AVCaptureSession()
-                guard let device = inputCamera.device else {
-                    //TODO: LOG MANAGER
-                    print("\nFailed to get the camera device")
-                    return
-                }
-                do {
-                    try! device.lockForConfiguration()
-                    device.focusMode = .continuousAutoFocus
-                    device.autoFocusRangeRestriction = .far
-                    device.unlockForConfiguration()
-                    let input = try AVCaptureDeviceInput(device: device)
-                    let output = AVCaptureMetadataOutput()
-                    if session.canSetSessionPreset(AVCaptureSession.Preset.high) {
-                        session.sessionPreset = AVCaptureSession.Preset.high //TODO
-                    }
-                    if session.canAddInput(input) {
-                        session.addInput(input)
-                    }
-                    if session.canAddOutput(output) {
-                        session.addOutput(output)
-                    }
-                    output.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
-                    output.metadataObjectTypes = self.defaultMetadata //TODO
-                    
-                    self.previewLayer = AVCaptureVideoPreviewLayer(session: session)
-                    self.previewLayer?.videoGravity = AVLayerVideoGravity.resizeAspectFill
-                    self.previewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.portrait //TODO
-                    DispatchQueue.main.async {
-                        self.previewLayer?.frame = view?.frame ?? self.frame
-                        if let previewLayer = self.previewLayer {
-                            self.layer.addSublayer(previewLayer)
-                        }
-                    }
-                    session.startRunning()
-                    self.session = session
-                } catch {
-                    //TODO: LOG MANAGER
-                    print("\nFailed to capture barcode: \(error)")
-                }
+            case .justAuthorized, .alreadyAuthorized: break // if it has grant access
+
             case .justDenied, .alreadyDenied, .restricted:
-                //TODO: LOG MANAGER
-                print("\nNOT AUTHORIZED TO USE CAMERA")
+                self.onScanFailure?(PSUIScannerError.cameraRestricted)
+                self.logger.w(PSUIScannerError.cameraRestricted.description)
             }
+        }
+        let session = AVCaptureSession()
+        guard let device = inputCamera.device else {
+            logger.e("Failed to get the camera device")
+            return
+        }
+        do {
+            let input = try AVCaptureDeviceInput(device: device)
+            if session.canAddInput(input) {
+                session.addInput(input)
+            }
+            
+            let output = AVCaptureMetadataOutput()
+            if session.canAddOutput(output) {
+                session.addOutput(output)
+            }
+            output.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
+            output.metadataObjectTypes = allowedMetadata ?? AVMetadataObject.ObjectType.defaultTypes
+            
+            previewLayer = AVCaptureVideoPreviewLayer(session: session)
+            previewLayer?.videoGravity = AVLayerVideoGravity.resizeAspectFill
+            previewLayer?.contentsGravity = .resizeAspectFill
+            previewLayer?.connection?.videoOrientation = .portrait
+            previewLayer?.frame = CGRect(x: 0, y: 0, width: frame.width, height: frame.height)
+            if let previewLayer = previewLayer {
+                layer.insertSublayer(previewLayer, at: 0)
+            }
+            
+            session.startRunning()
+            self.session = session
+            if !subviews.contains(highlightView) {
+                addSubview(highlightView)
+            }
+        } catch {
+            logger.e(error)
         }
         
         #endif
@@ -114,7 +121,7 @@ open class PSUIBarcodeScannerView: UIView {
     
     private func endCapturing() {
         #if !targetEnvironment(simulator)
-        guard let session = self.session else {
+        guard let session = session else {
             return
         }
         for input in session.inputs {
@@ -123,31 +130,30 @@ open class PSUIBarcodeScannerView: UIView {
         for output in session.outputs {
             session.removeOutput(output)
         }
-        self.session?.stopRunning()
-        self.previewLayer?.removeFromSuperlayer()
-        self.previewLayer = nil
+        session.stopRunning()
+        previewLayer?.removeFromSuperlayer()
+        previewLayer = nil
         self.session = nil
+        highlightView.removeFromSuperview()
         #endif
     }
     
     public func stopCapturing() {
         #if !targetEnvironment(simulator)
-        if let session = self.session, session.isRunning {
+        if let session = session, session.isRunning {
             session.stopRunning()
         } else {
-            //TODO: LOG MANAGER
-            print("\nThere's no active session to be stopped")
+            logger.w("There's no active session to be stopped")
         }
         #endif
     }
     
     public func restartCapturing() {
         #if !targetEnvironment(simulator)
-        if let session = self.session, session.isInterrupted {
+        if let session = session, !session.isRunning {
             session.startRunning()
         } else {
-            //TODO: LOG MANAGER
-            print("\nThere's no active session, use startCapturing instead of restartCapturing")
+            logger.w("There's no active session, use startCapturing instead of restartCapturing")
         }
         #endif
     }
@@ -158,53 +164,42 @@ extension PSUIBarcodeScannerView: AVCaptureMetadataOutputObjectsDelegate {
     
     public func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
         var highlightViewRect = CGRect.zero
-        guard let metadata = metadataObjects.first as? AVMetadataMachineReadableCodeObject, let code = metadata.stringValue, let transformedResult = self.previewLayer?.transformedMetadataObject(for: metadata) else {
-            //TODO: LOG MANAGER
-            print("\nNo barcode was detected")
-            self.highlightView.frame = highlightViewRect
-            self.bringSubviewToFront(self.highlightView)
-            self.onScanFailure?("No barcode was detected")
+        guard !shouldIgnoreResults, let metadata = metadataObjects.first as? AVMetadataMachineReadableCodeObject, let code = metadata.stringValue, let transformedResult = previewLayer?.transformedMetadataObject(for: metadata) else {
+            highlightView.frame = highlightViewRect
+            highlightView.layer.borderColor = highlightErrorColor.cgColor
+            bringSubviewToFront(highlightView)
+            onScanFailure?(PSUIScannerError.invalidMetadata)
+            logger.i(PSUIScannerError.invalidMetadata)
             return
         }
-        print("\nMedia time")
-        print(metadata.time)
-       
+
+        let newResult = PSUIScannerResponse(value: code, type: PSUIMetadataObjectType.from(objectType: metadata.type, code: code), date: Date())
         
-        let newResult = PSUIScannerResult(value: code, type: PSUIMetadataObjectType.from(objectType: metadata.type), date: Date())
-        
-        if !self.canRescanSameBarcode, let last = self.lastResult, last.value == code {
-            print("\nReading the same barcode again")
-            self.highlightView.frame = highlightViewRect
-            self.bringSubviewToFront(self.highlightView)
-            self.onScanFailure?("Reading the same barcode again")
+        if !canRescanSameBarcode, let last = lastResult, last.value == code {
+            highlightView.frame = highlightViewRect
+            highlightView.layer.borderColor = highlightSameBarcodeColor.cgColor
+            bringSubviewToFront(highlightView)
+            onScanFailure?(PSUIScannerError.sameBarcode)
+            logger.i(PSUIScannerError.sameBarcode.description + " " + last.value)
             return
         }
-        
-        if self.defaultMetadata.contains(metadata.type), let containsBarcode = self.previewLayer?.bounds.contains(transformedResult.bounds), containsBarcode {
-            let rect = CGRect(x: transformedResult.bounds.origin.x, y: transformedResult.bounds.origin.y - 50, width: transformedResult.bounds.size.width, height: transformedResult.bounds.size.height + 50)
+        guard !isOneTimeSearch, let _ = lastResult else {
+            return
+        }
+        if let containsBarcode = previewLayer?.bounds.contains(transformedResult.bounds), containsBarcode {
+            let rect = CGRect(x: transformedResult.bounds.origin.x, y: transformedResult.bounds.origin.y, width: transformedResult.bounds.size.width, height: transformedResult.bounds.size.height)
             highlightViewRect = rect
-            self.lastResult = newResult
-            self.onScanSuccess?(newResult)
-            //TODO: LOG MANAGER
-            print("\n")
-            print(newResult)
-            
+            highlightView.layer.borderColor = highlightColor.cgColor
+            lastResult = newResult
+            onScanSuccess?(newResult)
+            logger.d(newResult)
         } else {
             highlightViewRect = CGRect.zero
-            //TODO: LOG MANAGER
-            self.onScanFailure?("Got unsupported barcode or it's not within the preview bounds")
-            print("\nGot unsupported barcode or it's not within the preview bounds")
+            onScanFailure?(PSUIScannerError.barcodeOutOfBounds)
+            logger.i(PSUIScannerError.barcodeOutOfBounds.description)
         }
-        self.highlightView.frame = highlightViewRect
-        self.bringSubviewToFront(self.highlightView)
-    }
-    
-}
-
-public extension PSUIBarcodeScannerView {
-    
-    var defaultMetadata: [AVMetadataObject.ObjectType] {
-        return [AVMetadataObject.ObjectType.code39, AVMetadataObject.ObjectType.code93, AVMetadataObject.ObjectType.code128, AVMetadataObject.ObjectType.pdf417, AVMetadataObject.ObjectType.qr]
+        highlightView.frame = highlightViewRect
+        bringSubviewToFront(highlightView)
     }
     
 }
@@ -214,9 +209,9 @@ public extension PSUIScannerCamera {
     var device: AVCaptureDevice? {
         switch self {
         case .front:
-            return AVCaptureDevice.default(.builtInWideAngleCamera, for: AVMediaType.video, position: .front)
+            return AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
         case .rear:
-            return AVCaptureDevice.default(.builtInWideAngleCamera, for: AVMediaType.video, position: .back)
+            return AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
         }
     }
 }
@@ -241,21 +236,29 @@ public extension PSUIMetadataObjectType {
             return AVMetadataObject.ObjectType.code39Mod43
         case .dataMatrix:
             return AVMetadataObject.ObjectType.dataMatrix
+        case .ean13, .upca:
+            return AVMetadataObject.ObjectType.ean13
+        case .ean8:
+            return AVMetadataObject.ObjectType.ean8
+        case .upce:
+            return AVMetadataObject.ObjectType.upce
+        case .face:
+            return AVMetadataObject.ObjectType.face
+        case .interleaved2of5:
+            return AVMetadataObject.ObjectType.interleaved2of5
+        case .itf14:
+            return AVMetadataObject.ObjectType.itf14
         case .unsupported:
             return nil
-        case .eAN13Code:
-            return AVMetadataObject.ObjectType.ean13
-        case .eAN8Code:
-            return AVMetadataObject.ObjectType.ean8
-        case .uPCECode:
-            return AVMetadataObject.ObjectType.upce
         }
     }
     
-    static func from(objectType: AVMetadataObject.ObjectType) -> PSUIMetadataObjectType {
+    static func from(objectType: AVMetadataObject.ObjectType, code: String) -> PSUIMetadataObjectType {
         switch objectType {
         case .code39:
             return PSUIMetadataObjectType.code39
+        case .code93:
+            return PSUIMetadataObjectType.code93
         case .code128:
             return PSUIMetadataObjectType.code128
         case .pdf417:
@@ -268,10 +271,29 @@ public extension PSUIMetadataObjectType {
             return PSUIMetadataObjectType.code39Mod43
         case .dataMatrix:
             return PSUIMetadataObjectType.dataMatrix
+        case .ean13:
+            // UPC-A is an EAN-13 barcode with a zero prefix.
+            // See: https://stackoverflow.com/questions/22767584/ios7-barcode-scanner-api-adds-a-zero-to-upca-barcode-format
+            if code.hasPrefix("0") {
+                return PSUIMetadataObjectType.upca
+            } else {
+                return PSUIMetadataObjectType.ean13
+            }
+        case .ean8:
+            return PSUIMetadataObjectType.ean8
+        case .upce:
+            return PSUIMetadataObjectType.upce
+        case .face:
+            return PSUIMetadataObjectType.face
+        case .interleaved2of5:
+            return PSUIMetadataObjectType.interleaved2of5
+        case .itf14:
+            return PSUIMetadataObjectType.itf14
         default:
             return PSUIMetadataObjectType.unsupported
         }
     }
+
 }
 
 private extension AVCaptureDevice {
@@ -312,4 +334,36 @@ private extension UIApplication {
     static var camaraUsage: String? {
         return Bundle.main.object(forInfoDictionaryKey: "NSCameraUsageDescription") as? String
     }
+}
+
+private extension PSUIScannerCamera {
+    
+    enum PSUIScannerCameraError: Error {
+        case captureSessionAlreadyRunning
+        case captureSessionIsMissing
+        case inputsAreInvalid
+        case invalidOperation
+        case noCamerasAvailable
+        case unknown
+    }
+}
+
+public extension AVMetadataObject.ObjectType {
+    
+    public static var defaultTypes = [
+        AVMetadataObject.ObjectType.aztec,
+        AVMetadataObject.ObjectType.code128,
+        AVMetadataObject.ObjectType.code39,
+        AVMetadataObject.ObjectType.code39Mod43,
+        AVMetadataObject.ObjectType.code93,
+        AVMetadataObject.ObjectType.dataMatrix,
+        AVMetadataObject.ObjectType.ean13,
+        AVMetadataObject.ObjectType.ean8,
+        AVMetadataObject.ObjectType.face,
+        AVMetadataObject.ObjectType.interleaved2of5,
+        AVMetadataObject.ObjectType.itf14,
+        AVMetadataObject.ObjectType.pdf417,
+        AVMetadataObject.ObjectType.qr,
+        AVMetadataObject.ObjectType.upce
+    ]
 }

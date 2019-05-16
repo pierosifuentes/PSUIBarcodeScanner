@@ -16,10 +16,12 @@
 		202648A3223BE487007DFA70 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 202648A2223BE487007DFA70 /* Assets.xcassets */; };
 		202648A6223BE487007DFA70 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 202648A4223BE487007DFA70 /* LaunchScreen.storyboard */; };
 		202648AE223BE55B007DFA70 /* PSUIScannerCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202648AD223BE55B007DFA70 /* PSUIScannerCamera.swift */; };
-		202648B0223BE5D0007DFA70 /* PSUIScannerResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202648AF223BE5D0007DFA70 /* PSUIScannerResult.swift */; };
+		202648B0223BE5D0007DFA70 /* PSUIScannerResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202648AF223BE5D0007DFA70 /* PSUIScannerResponse.swift */; };
 		202648B2223BE638007DFA70 /* PSUIBarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202648B1223BE638007DFA70 /* PSUIBarcodeScannerView.swift */; };
 		202648B3223BE8A5007DFA70 /* PSUIBarcodeScanner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2026487B223BE44C007DFA70 /* PSUIBarcodeScanner.framework */; };
 		202648B4223BE8A5007DFA70 /* PSUIBarcodeScanner.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 2026487B223BE44C007DFA70 /* PSUIBarcodeScanner.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		2071B660228B2B620076FE4A /* PSUIScannerLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071B65F228B2B620076FE4A /* PSUIScannerLogger.swift */; };
+		2071B664228C9FEC0076FE4A /* PSUIScannerError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2071B663228C9FEC0076FE4A /* PSUIScannerError.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -68,8 +70,10 @@
 		202648A5223BE487007DFA70 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		202648A7223BE487007DFA70 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		202648AD223BE55B007DFA70 /* PSUIScannerCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PSUIScannerCamera.swift; sourceTree = "<group>"; };
-		202648AF223BE5D0007DFA70 /* PSUIScannerResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PSUIScannerResult.swift; sourceTree = "<group>"; };
+		202648AF223BE5D0007DFA70 /* PSUIScannerResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PSUIScannerResponse.swift; sourceTree = "<group>"; };
 		202648B1223BE638007DFA70 /* PSUIBarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PSUIBarcodeScannerView.swift; sourceTree = "<group>"; };
+		2071B65F228B2B620076FE4A /* PSUIScannerLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PSUIScannerLogger.swift; sourceTree = "<group>"; };
+		2071B663228C9FEC0076FE4A /* PSUIScannerError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PSUIScannerError.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -156,7 +160,9 @@
 			isa = PBXGroup;
 			children = (
 				202648AD223BE55B007DFA70 /* PSUIScannerCamera.swift */,
-				202648AF223BE5D0007DFA70 /* PSUIScannerResult.swift */,
+				202648AF223BE5D0007DFA70 /* PSUIScannerResponse.swift */,
+				2071B663228C9FEC0076FE4A /* PSUIScannerError.swift */,
+				2071B65F228B2B620076FE4A /* PSUIScannerLogger.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -314,8 +320,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				202648B2223BE638007DFA70 /* PSUIBarcodeScannerView.swift in Sources */,
+				2071B660228B2B620076FE4A /* PSUIScannerLogger.swift in Sources */,
 				202648AE223BE55B007DFA70 /* PSUIScannerCamera.swift in Sources */,
-				202648B0223BE5D0007DFA70 /* PSUIScannerResult.swift in Sources */,
+				2071B664228C9FEC0076FE4A /* PSUIScannerError.swift in Sources */,
+				202648B0223BE5D0007DFA70 /* PSUIScannerResponse.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -506,6 +514,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = PSUIBarcodeScanner/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -533,6 +542,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = PSUIBarcodeScanner/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -592,6 +602,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 523DP5MTH2;
 				INFOPLIST_FILE = PSUIBarcodeScannerExamples/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -611,6 +622,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 523DP5MTH2;
 				INFOPLIST_FILE = PSUIBarcodeScannerExamples/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
