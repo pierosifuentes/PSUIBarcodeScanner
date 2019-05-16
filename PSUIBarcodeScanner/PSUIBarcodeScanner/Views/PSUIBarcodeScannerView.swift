@@ -9,6 +9,11 @@
 import UIKit
 import AVFoundation
 
+public protocol PSUIBarcodeScannerViewDelegate: class {
+    func barcodeScannerView(_ scanner: PSUIBarcodeScannerView, didScan barcode: PSUIScannerResponse)
+    func barcodeScannerView(_ scanner: PSUIBarcodeScannerView, didFailBy error: PSUIScannerError)
+}
+
 open class PSUIBarcodeScannerView: UIView {
     
     private var session: AVCaptureSession?
@@ -24,9 +29,10 @@ open class PSUIBarcodeScannerView: UIView {
     public var onScanFailure: ((PSUIScannerError) -> Void)?
     public var allowedMetadata: [AVMetadataObject.ObjectType]?
     public var logger: PSUIScannerLogger = PSUIScannerLogger()
-    public var highlightColor: UIColor = UIColor.green
-    public var highlightErrorColor: UIColor = UIColor.red
-    public var highlightSameBarcodeColor: UIColor = UIColor.yellow
+    public var barcodeLineDetectionColor: UIColor = UIColor.green
+    public var barcodeErrorLineDetectionColor: UIColor = UIColor.red
+    public var barcodeRepetedLineDetectionColor: UIColor = UIColor.yellow
+    public weak var delegate: PSUIBarcodeScannerViewDelegate?
     
     // MARK: - IBOutlets
     
@@ -60,7 +66,7 @@ open class PSUIBarcodeScannerView: UIView {
         clipsToBounds = true
         backgroundColor = .black
         highlightView.autoresizingMask = UIView.AutoresizingMask(rawValue: UIView.AutoresizingMask.flexibleTopMargin.rawValue | UIView.AutoresizingMask.flexibleBottomMargin.rawValue | UIView.AutoresizingMask.flexibleLeftMargin.rawValue | UIView.AutoresizingMask.flexibleRightMargin.rawValue)
-        highlightView.layer.borderColor = highlightColor.cgColor
+        highlightView.layer.borderColor = barcodeLineDetectionColor.cgColor
         highlightView.layer.borderWidth = 3
 
     }
@@ -76,7 +82,11 @@ open class PSUIBarcodeScannerView: UIView {
             case .justAuthorized, .alreadyAuthorized: break // if it has grant access
 
             case .justDenied, .alreadyDenied, .restricted:
-                self.onScanFailure?(PSUIScannerError.cameraRestricted)
+                if self.delegate != nil {
+                    self.delegate?.barcodeScannerView(self, didFailBy: PSUIScannerError.cameraRestricted)
+                } else {
+                    self.onScanFailure?(PSUIScannerError.cameraRestricted)
+                }
                 self.logger.w(PSUIScannerError.cameraRestricted.description)
             }
         }
@@ -166,9 +176,13 @@ extension PSUIBarcodeScannerView: AVCaptureMetadataOutputObjectsDelegate {
         var highlightViewRect = CGRect.zero
         guard !shouldIgnoreResults, let metadata = metadataObjects.first as? AVMetadataMachineReadableCodeObject, let code = metadata.stringValue, let transformedResult = previewLayer?.transformedMetadataObject(for: metadata) else {
             highlightView.frame = highlightViewRect
-            highlightView.layer.borderColor = highlightErrorColor.cgColor
+            highlightView.layer.borderColor = barcodeErrorLineDetectionColor.cgColor
             bringSubviewToFront(highlightView)
-            onScanFailure?(PSUIScannerError.invalidMetadata)
+            if delegate != nil {
+                delegate?.barcodeScannerView(self, didFailBy: PSUIScannerError.invalidMetadata)
+            } else {
+                onScanFailure?(PSUIScannerError.invalidMetadata)
+            }
             logger.i(PSUIScannerError.invalidMetadata)
             return
         }
@@ -177,9 +191,13 @@ extension PSUIBarcodeScannerView: AVCaptureMetadataOutputObjectsDelegate {
         
         if !canRescanSameBarcode, let last = lastResult, last.value == code {
             highlightView.frame = highlightViewRect
-            highlightView.layer.borderColor = highlightSameBarcodeColor.cgColor
+            highlightView.layer.borderColor = barcodeRepetedLineDetectionColor.cgColor
             bringSubviewToFront(highlightView)
-            onScanFailure?(PSUIScannerError.sameBarcode)
+            if delegate != nil {
+                delegate?.barcodeScannerView(self, didFailBy: PSUIScannerError.sameBarcode)
+            } else {
+                onScanFailure?(PSUIScannerError.sameBarcode)
+            }
             logger.i(PSUIScannerError.sameBarcode.description + " " + last.value)
             return
         }
@@ -189,13 +207,21 @@ extension PSUIBarcodeScannerView: AVCaptureMetadataOutputObjectsDelegate {
         if let containsBarcode = previewLayer?.bounds.contains(transformedResult.bounds), containsBarcode {
             let rect = CGRect(x: transformedResult.bounds.origin.x, y: transformedResult.bounds.origin.y, width: transformedResult.bounds.size.width, height: transformedResult.bounds.size.height)
             highlightViewRect = rect
-            highlightView.layer.borderColor = highlightColor.cgColor
+            highlightView.layer.borderColor = barcodeLineDetectionColor.cgColor
             lastResult = newResult
-            onScanSuccess?(newResult)
+            if delegate != nil {
+                delegate?.barcodeScannerView(self, didScan: newResult)
+            } else {
+                onScanSuccess?(newResult)
+            }
             logger.d(newResult)
         } else {
             highlightViewRect = CGRect.zero
-            onScanFailure?(PSUIScannerError.barcodeOutOfBounds)
+            if delegate != nil {
+                delegate?.barcodeScannerView(self, didFailBy: PSUIScannerError.barcodeOutOfBounds)
+            } else {
+                onScanFailure?(PSUIScannerError.barcodeOutOfBounds)
+            }
             logger.i(PSUIScannerError.barcodeOutOfBounds.description)
         }
         highlightView.frame = highlightViewRect
