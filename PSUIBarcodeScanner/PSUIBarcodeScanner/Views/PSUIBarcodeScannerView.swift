@@ -352,6 +352,8 @@ private extension AVCaptureDevice {
                     }
                 }
             })
+        @unknown default:
+            fatalError("Unhandled case")
         }
     }
 }
@@ -376,7 +378,7 @@ private extension PSUIScannerCamera {
 
 public extension AVMetadataObject.ObjectType {
     
-    public static var defaultTypes = [
+    static var defaultTypes = [
         AVMetadataObject.ObjectType.aztec,
         AVMetadataObject.ObjectType.code128,
         AVMetadataObject.ObjectType.code39,
