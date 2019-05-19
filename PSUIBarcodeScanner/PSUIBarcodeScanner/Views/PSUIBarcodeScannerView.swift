@@ -23,7 +23,6 @@ open class PSUIBarcodeScannerView: UIView {
     private var currentCamera: PSUIScannerCamera?
     public var isOneTimeSearch: Bool = false
     public var canRescanSameBarcode: Bool = true
-    public var shouldScanOnLaunch: Bool = true
     public var shouldIgnoreResults: Bool = false
     public var onScanSuccess: ((PSUIScannerResponse) -> Void)?
     public var onScanFailure: ((PSUIScannerError) -> Void)?
@@ -39,26 +38,17 @@ open class PSUIBarcodeScannerView: UIView {
     override open func awakeFromNib() {
         super.awakeFromNib()
         setupUI()
-        if shouldScanOnLaunch {
-            startCapturing()
-        }
     }
     
     override public init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
-        if shouldScanOnLaunch {
-            startCapturing()
-        }
 
     }
     
     required public init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
         setupUI()
-        if shouldScanOnLaunch {
-            startCapturing()
-        }
     }
     
     private func setupUI() {
@@ -122,6 +112,7 @@ open class PSUIBarcodeScannerView: UIView {
             if !subviews.contains(highlightView) {
                 addSubview(highlightView)
             }
+            logger.i("Start capturing")
         } catch {
             logger.e(error)
         }
@@ -145,6 +136,7 @@ open class PSUIBarcodeScannerView: UIView {
         previewLayer = nil
         self.session = nil
         highlightView.removeFromSuperview()
+        logger.i("End capturing")
         #endif
     }
     
@@ -152,6 +144,7 @@ open class PSUIBarcodeScannerView: UIView {
         #if !targetEnvironment(simulator)
         if let session = session, session.isRunning {
             session.stopRunning()
+            logger.i("Stop capturing")
         } else {
             logger.w("There's no active session to be stopped")
         }
@@ -162,6 +155,7 @@ open class PSUIBarcodeScannerView: UIView {
         #if !targetEnvironment(simulator)
         if let session = session, !session.isRunning {
             session.startRunning()
+            logger.i("Restart capturing")
         } else {
             logger.w("There's no active session, use startCapturing instead of restartCapturing")
         }
@@ -201,7 +195,7 @@ extension PSUIBarcodeScannerView: AVCaptureMetadataOutputObjectsDelegate {
             logger.i(PSUIScannerError.sameBarcode.description + " " + last.value)
             return
         }
-        guard !isOneTimeSearch, let _ = lastResult else {
+        if isOneTimeSearch, let _ = lastResult {
             return
         }
         if let containsBarcode = previewLayer?.bounds.contains(transformedResult.bounds), containsBarcode {

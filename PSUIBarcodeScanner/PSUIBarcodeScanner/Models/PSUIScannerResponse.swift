@@ -6,6 +6,8 @@
 //  Copyright © 2019 PRSP. All rights reserved.
 //
 
+import Foundation
+
 public enum PSUIMetadataObjectType: String {
     case code39, code39Mod43, ean8, ean13, code93, code128, pdf417, qr, aztec, dataMatrix, upce, face, interleaved2of5, itf14, upca, unsupported
     public static var all: [PSUIMetadataObjectType] = [.code39, .code39Mod43, .ean8, .ean13, .code93, .code128, .pdf417, .qr, .aztec, .dataMatrix, .upce, .face, .interleaved2of5, .itf14, .upca]
