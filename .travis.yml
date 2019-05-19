@@ -3,7 +3,7 @@ os: osx
 osx_image: xcode10.2
 
 script:
-- xcodebuild clean build -project PSUIBarcodeScanner.xcodeproj -scheme "PSUIBarcodeScanner" -sdk iphonesimulator
+- xcodebuild clean build -project PSUIBarcodeScanner/PSUIBarcodeScanner.xcodeproj -scheme "PSUIBarcodeScanner" -sdk iphonesimulator
 
 notifications:
   email: false
