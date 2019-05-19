@@ -7,8 +7,6 @@
 ![Swift](https://img.shields.io/badge/%20in-swift%205.0-orange.svg)
 [![Carthage Compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 
-https://cocoapods.org/pods/PSUIBarcodeScanner
-
 ## Description
 
 **PSUIBarcodeScanner** is a simple and beautiful wrapper around the camera with
@@ -33,7 +31,7 @@ barcode capturing functionality and a great user experience.
 
 ## Installation
 
-**PSUIBarcodeScanner** is available through [CocoaPods](http://cocoapods.org). To install
+**PSUIBarcodeScanner** is available through [CocoaPods](https://cocoapods.org/pods/PSUIBarcodeScanner). To install
 it, simply add the following line to your Podfile:
 
 ```ruby
@@ -58,7 +56,9 @@ Piero Sifuentes, piero9212@gmail.com
 
 ## Contributing
 
+Let us know if are having issues using this framework, don't forget post all the information about the issue like the context, some code using it and the track trace (in cases of crash).
 
+Report bugs, discuss features and post feedback using GitHub Issues. Be sure to check our documentation, FAQ and past issues before opening any new issues.
 
 ## License
 
