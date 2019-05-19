@@ -1,5 +1,6 @@
-osx_image: xcode9
 language: swift
+os: osx
+osx_image: xcode10.2
 
 script:
 - xcodebuild clean build -project PSUIBarcodeScanner.xcodeproj -scheme "PSUIBarcodeScanner" -sdk iphonesimulator
