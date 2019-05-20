@@ -7,3 +7,7 @@ script:
 
 notifications:
   email: false
+
+before_deploy:
+  - carthage build --no-skip-current
+  - carthage archive $FRAMEWORK_NAME

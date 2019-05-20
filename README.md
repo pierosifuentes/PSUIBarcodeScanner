@@ -9,8 +9,7 @@
 
 ## Description
 
-**PSUIBarcodeScanner** is a simple and beautiful wrapper around the camera with
-barcode capturing functionality and a great user experience.
+**PSUIBarcodeScanner** is a simple and fully customizable barcode scanner written in Swift
 
 - [x] Barcode scanning.
 - [x] Handling of camera authorization status.
@@ -45,7 +44,7 @@ In order to quickly try the demo project of a **PSUIBarcodeScanner** just run
 To install just write into your Cartfile:
 
 ```ruby
-github "psifuentes/PSUIBarcodeScanner"
+github "piero9212/PSUIBarcodeScanner"
 ```
 
 To install **PSUIBarcodeScanner** manually just download and drop `PSUIBarcodeScanner` folder in your project.
