@@ -14,6 +14,7 @@ Pod::Spec.new do |s|
   s.author             = { "Piero Sifuentes" => "piero9212@gmail.com" }
   s.social_media_url   = "https://twitter.com/piero_sifuentes"
   s.platform     = :ios, "10.0"
+  s.swift_version = '5.0'
   s.requires_arc = true
   s.source       = { :git => "https://github.com/piero9212/PSUIBarcodeScanner.git", :tag => "#{s.version}" }
   s.source_files       = 'PSUIBarcodeScanner/PSUIBarcodeScanner/**/*.swift'
